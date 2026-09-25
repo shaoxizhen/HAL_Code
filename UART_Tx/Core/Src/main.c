@@ -15,6 +15,15 @@
   *
   ******************************************************************************
   */
+/**
+  * 工程：UART_Tx —— HAL_UART_Transmit 发字符串 + printf 重定向（DAY20）
+  * 硬件：USART1，TX = PA9、RX = PA10（本工程只用到发送方向）；115200 8N1
+  * 时钟：HSE 8 MHz → PLL ×9 → 72 MHz；USART1 挂 APB2，时钟 = PCLK2 = 72 MHz
+  * 关键：printf 属于 C 标准库，本身不认识 USART1；它把变量格式化后，逐个字符调用底层输出函数 fputc
+  *       本工程用 MicroLIB（Keil 里勾选 Use MicroLIB，绕开半主机机制），并在文件末尾实现了 fputc，把字符送到 USART1
+  * 现象：每 500 ms 打印一行 "count = n"
+  * 验证：逻辑分析仪解码应为 13 字节；实测整串约 1.12 ms（约 129 位 × 8.68 µs）
+  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -24,7 +33,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "string.h"
-#include "stdio.h"
+#include "stdio.h"		// printf 的声明；重定向还要在 Keil 里勾上 Use MicroLIB
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,7 +54,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-int count = 0;
+int count = 0;		// printf 里的计数器，每 500 ms 加一
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -97,9 +106,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		printf("count = %d\r\n",count);
-		count++;
-		HAL_Delay(500);
+		printf("count = %d\r\n",count);	// 经 fputc 重定向后从 USART1 发出；\r\n 让串口助手换行显示
+		count++;		// 计数器加一，下一行打印新值
+		HAL_Delay(500);	// 间隔 500 ms，便于观察和计数
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -147,11 +156,12 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+/* printf 重定向的核心：C 库每输出一个字符就调用一次 fputc，把它接到 USART1 上 */
 int fputc(int ch, FILE *f)
 {
-    uint8_t c = (uint8_t)ch;
-    HAL_UART_Transmit(&huart1, &c, 1, 100);
-    return ch;
+    uint8_t c = (uint8_t)ch;					// 形参是 int，这里转成本次要发送的那 1 个字节
+    HAL_UART_Transmit(&huart1, &c, 1, 100);		// 阻塞发送这个字节。每个字符都单独调用一次，所以字符之间会出现间隙
+    return ch;									// 按 C 库约定返回写出的字符
 }
 /* USER CODE END 4 */
 

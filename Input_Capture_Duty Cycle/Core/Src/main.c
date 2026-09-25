@@ -15,6 +15,17 @@
   *
   ******************************************************************************
   */
+/**
+  * 工程：Input_Capture_Duty Cycle —— 输入捕获测脉宽与占空比（DAY17）
+  * 硬件：TIM3_CH1 从 PA6 输出 1 kHz PWM，用跳线把 PA6 接到 PA0；TIM2_CH1（PA0）负责输入捕获
+  * 时钟：HSE 8 MHz → PLL ×9 → 72 MHz；TIM2、TIM3 挂 APB1（36 MHz），定时器时钟 = 36 MHz × 2 = 72 MHz
+  * 计数：两个定时器 PSC 都取 72-1 → 计数频率 = 72 MHz / 72 = 1 MHz，1 个计数 = 1 µs
+  *       TIM3：ARR = 1000-1 → PWM 频率 = 1 MHz / 1000 = 1 kHz，CCR = 500 → 占空比 50%
+  *       TIM2：ARR = 65535，自由计数，只当“时间尺子”
+  * 思路：单通道靠切换极性（上升沿 ↔ 下降沿）轮流捕获，三个状态分别得到脉宽和周期
+  *       占空比 = 高电平计数 / 周期计数 × 100；频率 = 1 MHz / 周期计数
+  * 说明：回调里保留了当时练习用的“填空”注释，作为思路记录
+  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -44,14 +55,14 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-volatile uint8_t capture_state = 0;	//状态标志位
-volatile uint32_t rise_value1 = 0;	//第一次上升沿捕获值
-volatile uint32_t fall_value = 0;	//第一次下降沿捕获值
-volatile uint32_t rise_value2 = 0;//第二次上升沿捕获值
-volatile uint32_t high_counts = 0;//高电平对应的CNT数
-volatile uint32_t period_counts = 0;//一个周期对应的CNT数
-volatile float duty = 0.0f;//占空比
-volatile float fre = 0.0f;//频率
+volatile uint8_t capture_state = 0;		// 状态机：0 = 等第一次上升沿，1 = 等下降沿，2 = 等第二次上升沿
+volatile uint32_t rise_value1 = 0;		// 第一次上升沿捕获到的 CNT（周期起点）
+volatile uint32_t fall_value = 0;		// 下降沿捕获到的 CNT（高电平终点）
+volatile uint32_t rise_value2 = 0;		// 第二次上升沿捕获到的 CNT（周期终点）
+volatile uint32_t high_counts = 0;		// 高电平期间的 CNT 个数，也就是脉宽（单位 µs）
+volatile uint32_t period_counts = 0;	// 一个完整周期对应的 CNT 个数（单位 µs）
+volatile float duty = 0.0f;				// 占空比，这里存的是百分数
+volatile float fre = 0.0f;				// 频率（Hz）
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -97,8 +108,8 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);//启动TIM3输出[WM波
-	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);//启动定时器TIM计数，并使能输入捕获中断
+	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);	// TIM3_CH1（PA6）输出 1 kHz PWM，作为被测信号源
+	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);	// TIM2_CH1（PA0）开始输入捕获并允许捕获中断
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -152,11 +163,12 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+/* TIM2 输入捕获回调：PA0 上每来一个边沿进一次；极性由程序在运行时切换，所以上升沿和下降沿都会进来 */
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)	//输入捕获中断回调函数
 {
-    if (htim->Instance == TIM2)
+    if (htim->Instance == TIM2)		// 确认中断来自 TIM2
     {
-        uint32_t now = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);//读取CCR1的值
+        uint32_t now = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);// 读 CCR1：边沿到来那一刻的 CNT 值
 
         switch (capture_state)
         {

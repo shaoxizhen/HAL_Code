@@ -15,6 +15,13 @@
   *
   ******************************************************************************
   */
+/**
+  * 工程：EXTI_Test —— 外部中断 + 软件消抖 + LED 翻转
+  * 硬件：KEY 接 PA0（内部上拉，下降沿触发，按下接 GND）；LED 接 PC13（开漏输出，低电平点亮）
+  * 时钟：只用内部 HSI 8 MHz，未启用 HSE，也没有开 PLL
+  * 思路：EXTI 回调里只置标志、记时间戳，耗时的判断放到主循环，中断保持最短
+  * 验证：每按一次按键，PC13 上的 LED 翻转一次
+  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -54,8 +61,8 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-volatile uint8_t key_flag=0;
-volatile uint16_t key_press_tick = 0;
+volatile uint8_t key_flag=0;			// 中断置 1，通知主循环“有按键事件”；volatile 防止编译器把它缓存进寄存器
+volatile uint16_t key_press_tick = 0;	// 记下按下时刻的 SysTick 毫秒数，主循环靠它算 20 ms 消抖窗口
 /* USER CODE END 0 */
 
 /**
@@ -95,14 +102,18 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+		/* 主循环：检测中断置下的标志，完成消抖确认后再翻转 LED */
 		if(key_flag == 1)
 		{
+			/* 距按下已过 20 ms 才继续。机械抖动一般 <10 ms，等过再判定；
+			   用“现在 - 当时”而不是“现在 > 当时+20”，是为了让 SysTick 回绕时依然算得对 */
 			if((HAL_GetTick() - key_press_tick) >= 20)
 			{
-				key_flag = 0;
+				key_flag = 0;		// 清标志：同一次按下只处理一次
+				/* 再读一次引脚电平：仍为低说明是真按下，而不是抖动残留或已经松手 */
 				if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_RESET)
 				{
-					HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+					HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);	// 翻转 LED：PC13 是开漏接上拉，低电平点亮
 				}
 			}
 			
@@ -154,10 +165,11 @@ void SystemClock_Config(void)
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	if(GPIO_Pin == KEY_Pin)
+	/* EXTI 中断回调，运行在中断上下文里：只做最短的事 */
+	if(GPIO_Pin == KEY_Pin)			// 只处理 PA0（EXTI0），别的引脚的中断不理会
 	{
-		key_flag = 1;
-		key_press_tick = HAL_GetTick();
+		key_flag = 1;				// 置标志，真正的判断留给主循环
+		key_press_tick = HAL_GetTick();	// 记录按下时刻，作为消抖计时的起点
 	}
 }
 

@@ -15,6 +15,16 @@
   *
   ******************************************************************************
   */
+/**
+  * 工程：TIM_Test —— 定时器更新中断 + 按键中断消抖
+  * 硬件：TIM2 更新中断里翻转 PA9（把 PA9 当方波输出观察）；KEY 接 PA0（上拉、下降沿触发，按下接 GND）；LED 接 PC13（开漏输出，低电平点亮）
+  * 时钟：HSE 8 MHz → PLL ×9 → SYSCLK/HCLK 72 MHz；APB1 /2（36 MHz）、APB2 /1（72 MHz）
+  * 定时：TIM2 挂 APB1，定时器时钟 = 36 MHz × 2 = 72 MHz
+  *       PSC = 7200-1 → 计数频率 72 MHz / 7200 = 10 kHz
+  *       ARR = 1000-1 → 每 1000 个计数产生一次更新事件，即每 100 ms 进一次中断
+  *       所以 PA9 每 100 ms 翻转一次，输出 5 Hz 方波（周期 200 ms）
+  * 验证：PA9 上能看到 5 Hz 方波；每按一次按键，PC13 上的 LED 翻转一次
+  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -55,8 +65,8 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint32_t key_tick=0;
-uint8_t key_flag=0;
+uint32_t key_tick=0;	// 按键按下的时刻（SysTick 毫秒数），主循环用它判断 20 ms 消抖窗口
+uint8_t key_flag=0;		// 中断置 1 通知主循环。注意：这里是“中断写、主循环读”，严格说应加 volatile（EXTI_Test 里加了），否则开优化后可能一直读到旧值
 /* USER CODE END 0 */
 
 /**
@@ -90,21 +100,25 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-	HAL_TIM_Base_Start_IT(&htim2);
+	HAL_TIM_Base_Start_IT(&htim2);	// 启动 TIM2 并使能更新中断；之后每 100 ms 进一次 HAL_TIM_PeriodElapsedCallback
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+		/* 主循环：处理按键中断留下的标志，做 20 ms 消抖确认 */
 		if(key_flag == 1)
 		{
+			/* 距按下已过 20 ms 才继续（机械抖动一般 <10 ms）；
+			   用“现在 - 当时”的写法，SysTick 回绕时依然算得对 */
 			if((HAL_GetTick() - key_tick) >= 20)
 			{
-				key_flag = 0;
+				key_flag = 0;		// 清标志，同一次按下只处理一次
+				/* 再读一次电平：仍为低才是真按下，不是抖动残留或已经松手 */
 				if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_RESET)
 				{
-					HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+					HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);	// 翻转 LED（PC13 低电平点亮）
 				}
 			}
 		}
@@ -155,19 +169,21 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+/* TIM2 更新中断回调：每 100 ms 进入一次，这里只翻转 PA9，用示波器或逻辑分析仪就能看到定时器在跑 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)	
 {
 	if(htim->Instance ==TIM2) 
 	{
-		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
+		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);	// 每进一次中断翻转一次 → 高、低各 100 ms → 5 Hz 方波
 	}
 }
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	if(GPIO_Pin == KEY_Pin)
+	/* 按键外部中断回调：与 EXTI_Test 同样的思路，只置标志、记时刻，判断留给主循环 */
+	if(GPIO_Pin == KEY_Pin)		// KEY_Pin 就是 GPIO_PIN_0
 	{
-		key_tick = HAL_GetTick();
-		key_flag = 1;
+		key_tick = HAL_GetTick();	// 记录按下时刻，作为消抖计时起点
+		key_flag = 1;				// 通知主循环“有按键事件”
 	}
 }
 /* USER CODE END 4 */

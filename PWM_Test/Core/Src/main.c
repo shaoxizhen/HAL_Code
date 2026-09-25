@@ -15,6 +15,17 @@
   *
   ******************************************************************************
   */
+/**
+  * 工程：PWM_Test —— TIM2_CH1 输出 PWM，并在运行中修改占空比
+  * 硬件：PWM 从 PA0 输出（TIM2_CH1，复用推挽）
+  * 时钟：HSE 8 MHz → PLL ×9 → SYSCLK/HCLK 72 MHz；APB1 /2（36 MHz）
+  *       TIM2 挂 APB1，总线预分频不为 1，所以定时器时钟 = 36 MHz × 2 = 72 MHz
+  * PWM ：PSC = 7200-1 → 计数频率 72 MHz / 7200 = 10 kHz
+  *       ARR = 100-1 → 一个周期 100 个计数 → PWM 频率 = 10 kHz / 100 = 100 Hz
+  *       占空比 = CCR / (ARR+1) = CCR / 100
+  * 现象：CCR 依次取 25 / 50 / 75 / 99，每 500 ms 换一档 → 占空比 25% / 50% / 75% / 99%
+  * 验证：示波器或逻辑分析仪量 PA0，频率恒为 100 Hz，高电平宽度随 CCR 变化
+  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -89,20 +100,21 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);	// 启动 TIM2 通道 1 的 PWM 输出，PA0 开始出波形（同时也会把捕获/比较使能位置起来）
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		TIM2->CCR1 = 25;
+		/* 直接写寄存器改比较值。改 CCR 只改变高电平时间，周期由 ARR 决定，所以频率不变 */
+		TIM2->CCR1 = 25;	// 占空比 25/100 = 25%
 		HAL_Delay(500);
-		TIM2->CCR1 = 50;
+		TIM2->CCR1 = 50;	// 50%
 		HAL_Delay(500);
-		TIM2->CCR1 = 75;
+		TIM2->CCR1 = 75;	// 75%
 		HAL_Delay(500);
-		TIM2->CCR1 = 99;
+		TIM2->CCR1 = 99;	// 99%（有效电平几乎占满整个周期）
 		HAL_Delay(500);
     /* USER CODE END WHILE */
 

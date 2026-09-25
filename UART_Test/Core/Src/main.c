@@ -15,6 +15,14 @@
   *
   ******************************************************************************
   */
+/**
+  * 工程：UART_Test —— USART1 单字节发送（DAY19：UART 帧结构与波特率验证）
+  * 硬件：USART1，TX = PA9、RX = PA10；115200、8 数据位、无校验、1 停止位（8N1）
+  * 时钟：HSE 8 MHz → PLL ×9 → 72 MHz；USART1 挂 APB2，时钟就是 PCLK2 = 72 MHz
+  *       波特率寄存器 BRR = PCLK2 / 波特率 = 72 MHz / 115200 = 625 = 0x271
+  * 现象：每 500 ms 发一个字节 0x41，也就是字符 'A'
+  * 验证：逻辑分析仪抓一帧，每个位宽约 8.68 µs（1/115200），整帧 10 位 ≈ 86.8 µs，解码结果应为 0x41
+  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -96,9 +104,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		uint8_t data = 0x41;
-		HAL_UART_Transmit(&huart1, &data, sizeof(data), 100);
-		HAL_Delay(500);
+		uint8_t data = 0x41;	// 要发送的字节：'A'（十六进制 0x41）
+		HAL_UART_Transmit(&huart1, &data, sizeof(data), 100);	// 阻塞式发送 1 个字节，最多等 100 ms；等最后一个停止位发完（TC 置位）才返回
+		HAL_Delay(500);		// 隔 500 ms 再发下一个，方便在逻辑分析仪上单帧观察
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

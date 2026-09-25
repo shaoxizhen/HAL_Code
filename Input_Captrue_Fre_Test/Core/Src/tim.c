@@ -21,11 +21,11 @@
 #include "tim.h"
 
 /* USER CODE BEGIN 0 */
-volatile uint32_t capture_value1 = 0;    // ��һ�β���ֵ
-volatile uint32_t capture_value2 = 0;    // �ڶ��β���ֵ
-volatile uint32_t capture_count = 0;     // һ�����ڶ�Ӧ��CNT������
-volatile uint8_t capture_flag = 0;       // ����״̬��0=��һ�Σ�1=�ڶ���
-volatile float fre = 0.0f;               // �����ź�Ƶ��
+volatile uint32_t capture_value1 = 0;    // 第一次捕获到的 CNT（周期起点）
+volatile uint32_t capture_value2 = 0;    // 第二次捕获到的 CNT（周期终点）
+volatile uint32_t capture_count = 0;     // 一个周期对应的 CNT 个数（两次捕获的差）
+volatile uint8_t capture_flag = 0;       // 捕获状态：0 = 等第一次捕获，1 = 等第二次捕获
+volatile float fre = 0.0f;               // 计算出的被测信号频率（Hz）
 /* USER CODE END 0 */
 
 TIM_HandleTypeDef htim1;
@@ -257,32 +257,33 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
 }
 
 /* USER CODE BEGIN 1 */
-void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)	//��ʱ�����벶���жϻص�����
+/* TIM2_CH1 输入捕获回调：本工程只捕获上升沿，相邻两次上升沿的 CNT 差就是一个周期 */
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)	//定时器输入捕获中断回调函数
 {
-	if(htim->Instance == TIM2 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)	//�жϴ����жϵ���TIM2��ͨ��1
+	if(htim->Instance == TIM2 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)	//确认中断来自 TIM2 的通道 1
 	{
-		if(capture_flag == 0)	//���û�����
+		if(capture_flag == 0)	//第一次捕获（本轮的第一个上升沿）
 		{
-			capture_value1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);	//��ȡ����ֵ������
-			capture_flag =1;	//���±�־λ
+			capture_value1 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);	//读 CCR1：记下这一时刻的 CNT
+			capture_flag =1;	//置标志，下次中断就按第二次捕获处理
 		}
-		else	//�ڶ��β���
+		else	//第二次捕获（下一个上升沿）
 		{
-			capture_value2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);	//��ȡ����ֵ������
+			capture_value2 = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);	//读 CCR1：记下周期终点的 CNT
 			
-			if(capture_value2 >= capture_value1)	//���������û�����
+			if(capture_value2 >= capture_value1)	//两次之间没有回绕，直接相减
 			{
 				capture_count = capture_value2 - capture_value1;
 			}
-			else	//�����
+			else	//中途 CNT 数满一圈又回到 0，要把缺掉的那段补回来
 			{
 				capture_count = (65535 - capture_value1) + capture_value2 + 1;
 			}
-			if(capture_count != 0)	//��ֵ��Ϊ0������Ƶ��
+			if(capture_count != 0)	//差值为 0 说明两次读到同一个值，属异常数据，不算频率
 			{
-				fre = 72000000.0f/7200.0f/capture_count;
+				fre = 72000000.0f/7200.0f/capture_count;	//计数频率 = 72 MHz / 7200 = 10 kHz，频率 = 10 kHz ÷ 一个周期的计数个数
 			}
-			capture_flag = 0;	//���±�־λ
+			capture_flag = 0;	//清标志，准备测下一个周期
 		}
 	}
 }

@@ -15,6 +15,13 @@
   *
   ******************************************************************************
   */
+/**
+  * 工程：LED_Test —— GPIO 输出控制 LED
+  * 硬件：板载 LED 接 PC13（开漏输出 + 外部上拉，输出低电平点亮）；另一颗 LED 接 PA9（输出高电平点亮）
+  * 时钟：只用内部 HSI 8 MHz，未启用 HSE、未开 PLL（这个工程只练 GPIO，不需要高频时钟）
+  * 现象：两颗 LED 交替亮灭，每次保持 500 ms
+  * 要点：同一个“点亮”动作，接法不同需要的电平就不同 —— 这里 PC13 用 RESET（低）点亮，PA9 用 SET（高）点亮
+  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -94,13 +101,13 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);	// PC13 输出低 → 板载 LED 点亮
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);		// PA9 输出高 → 另一颗 LED 点亮
 		
-		HAL_Delay(500);
+		HAL_Delay(500);		// 保持 500 ms。HAL_Delay 靠 SysTick 计时，等待期间 CPU 在这空转
 		
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);	// 两个引脚同时取反 → 两颗 LED 交换状态
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);	// PC13 输出高（开漏=高阻）→ 板载 LED 灭
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

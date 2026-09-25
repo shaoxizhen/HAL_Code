@@ -15,6 +15,17 @@
   *
   ******************************************************************************
   */
+/**
+  * 工程：Input_Captrue_Fre_Test —— 输入捕获测周期与频率（DAY16）
+  * 硬件：TIM1_CH1 从 PA8 输出 1 kHz PWM，用跳线把 PA8 接到 PA0；TIM2_CH1（PA0）负责输入捕获
+  * 时钟：HSE 8 MHz → PLL ×9 → 72 MHz；TIM1 挂 APB2（72 MHz，该总线预分频为 /1，走 ×1）
+  *       TIM2 挂 APB1（36 MHz，预分频不为 1，定时器时钟 ×2 = 72 MHz）
+  * 计数：TIM1：PSC = 720-1 → 计数 100 kHz；ARR = 100-1 → 输出 1 kHz；CCR = 50 → 占空比 50%
+  *       TIM2：PSC = 7200-1 → 计数 10 kHz；ARR = 65535；两次上升沿之间的 CNT 差就是周期
+  * 思路：只捕获上升沿，相邻两次上升沿的 CNT 差 = 一个周期的计数个数；频率 = 10 kHz ÷ 周期计数
+  * 验证：算出的频率应接近 1000 Hz。注意这是用“名义计数频率”算的，晶振偏差测不出来，
+  *       要判断绝对频率是否准确，得靠逻辑分析仪或示波器这类有独立时基的仪器
+  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -90,14 +101,15 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);// TIM2输入捕获 + 中断
-	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);// TIM1输出PWM
+	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);	// TIM2_CH1（PA0）启动输入捕获并允许捕获中断
+	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);	// TIM1_CH1（PA8）输出 1 kHz PWM，作为被测信号源
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
-  {                                                                                                                                                                             
+  {
+    /* 主循环这里什么都不用做：捕获和频率计算全在 TIM2 的捕获中断里完成 */
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
