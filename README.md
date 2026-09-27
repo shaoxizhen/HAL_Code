@@ -16,6 +16,7 @@
 | `Input_Capture` | 输入捕获综合验收（阶段一，DAY18） |
 | `UART_Test` | UART 基础：USART1 115200 8N1 单字节发送（DAY19） |
 | `UART_Tx` | UART 发送：HAL_UART_Transmit 发字符串 + printf 重定向（DAY20） |
+| `UART_RX` | UART 接收：阻塞接收攒指令，电脑发 ON/OFF 控制 LED（DAY21） |
 
 ## 单个工程的标准结构
 
@@ -32,7 +33,7 @@
 
 ## 为什么仓库里没有 Drivers/
 
-每个 CubeMX 工程都会各自复制一份 CMSIS + HAL，本目录下 9 个工程合计约 590 MB，
+每个 CubeMX 工程都会各自复制一份 CMSIS + HAL，本目录下 10 个工程合计约 650 MB，
 内容完全相同。仓库只保存"自己写的代码 + 工程配置"，避免库文件淹没提交记录。
 
 **影响**：从仓库重新 clone / checkout 出来的工程缺少 `Drivers/`，Keil 编译会报找不到头文件。
