@@ -3,7 +3,7 @@
  * Auto generated Run-Time-Environment Configuration File
  *      *** Do not modify ! ***
  *
- * Project: 'TIM_TEST' 
+ * Project: 'TIM_Test'
  * Target:  'TIM_TEST' 
  */
 

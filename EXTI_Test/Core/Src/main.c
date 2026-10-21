@@ -62,7 +62,7 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 volatile uint8_t key_flag=0;			// 中断置 1，通知主循环“有按键事件”；volatile 防止编译器把它缓存进寄存器
-volatile uint16_t key_press_tick = 0;	// 记下按下时刻的 SysTick 毫秒数，主循环靠它算 20 ms 消抖窗口
+volatile uint32_t key_press_tick = 0;	// 记下按下时刻的 SysTick 毫秒数，主循环靠它算 20 ms 消抖窗口
 /* USER CODE END 0 */
 
 /**
