@@ -1,4 +1,4 @@
-# 换行符统一策略（E:\STM32_Code\Test）：仓库内部一律存 LF，检出到 Windows 时按需转换
+# 换行符统一策略（E:\STM32_Code\Learn）：仓库内部一律存 LF，检出到 Windows 时按需转换
 * text=auto
 
 # Keil / CubeMX 文本文件

@@ -1,30 +1,30 @@
-# Test —— STM32 基础实验工程
+# Learn —— STM32 基础实验工程
 
 按外设逐个推进的 STM32F103C8T6 实验工程，工具链是 STM32CubeMX + HAL 库 + Keil MDK。
-一个目录一个实验，配套学习笔记放在 `E:\Code\笔记`。
+一个目录一个实验；外层目录用两位序号排序，工程内部名称保持原样。配套学习笔记放在 `E:\Code\笔记`。
 
 ## 工程列表
 
 | 工程 | 主题 |
 | --- | --- |
-| `LED_Test` | GPIO 输出 / 点灯 |
-| `EXTI_Test` | 外部中断（按键） |
-| `TIM_Test` | 定时器基础 |
-| `PWM_Test` | PWM 输出 |
-| `Input_Captrue_Fre_Test` | 输入捕获测频率 / 周期 |
-| `Input_Capture_Duty Cycle` | 输入捕获测脉宽 / 占空比 |
-| `Input_Capture` | 输入捕获综合验收（阶段一，DAY18） |
-| `UART_Test` | UART 基础：USART1 115200 8N1 单字节发送（DAY19） |
-| `UART_Tx` | UART 发送：HAL_UART_Transmit 发字符串 + printf 重定向（DAY20） |
-| `UART_RX` | UART 接收：阻塞接收攒指令，电脑发 ON/OFF 控制 LED（DAY21） |
-| `I2C_Test` | I2C1 基础：检查设备地址是否应答 |
-| `I2C_Debug` | I2C1 调试：检查设备应答并读取 MPU6050 的 WHO_AM_I 寄存器 |
-| `I2C_MPU6050` | 读取 MPU6050 加速度与角速度数据，并在 OLED 上显示角速度 |
+| `01_LED_Test` | GPIO 输出 / 点灯 |
+| `02_EXTI_Test` | 外部中断（按键） |
+| `03_TIM_Test` | 定时器基础 |
+| `04_PWM_Test` | PWM 输出 |
+| `05_Input_Captrue_Fre_Test` | 输入捕获测频率 / 周期 |
+| `06_Input_Capture_Duty Cycle` | 输入捕获测脉宽 / 占空比 |
+| `07_Input_Capture` | 输入捕获综合验收（阶段一，DAY18） |
+| `08_UART_Test` | UART 基础：USART1 115200 8N1 单字节发送（DAY19） |
+| `09_UART_Tx` | UART 发送：HAL_UART_Transmit 发字符串 + printf 重定向（DAY20） |
+| `10_UART_RX` | UART 接收：阻塞接收攒指令，电脑发 ON/OFF 控制 LED（DAY21） |
+| `11_I2C_Test` | I2C1 基础：检查设备地址是否应答 |
+| `12_I2C_Debug` | I2C1 调试：检查设备应答并读取 MPU6050 的 WHO_AM_I 寄存器 |
+| `13_I2C_MPU6050` | 读取 MPU6050 加速度与角速度数据，并在 OLED 上显示角速度 |
 
 ## 单个工程的标准结构
 
 ```
-<工程名>/
+<序号>_<工程名>/
 ├── Core/Inc  Core/Src        自己写的代码              → 进仓库
 ├── <工程名>.ioc              CubeMX 配置               → 进仓库
 ├── .mxproject                CubeMX 元数据             → 进仓库
